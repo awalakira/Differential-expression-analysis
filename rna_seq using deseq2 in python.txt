@@ -1,0 +1,40 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
+
+# Activate automatic conversion of pandas objects to R objects
+pandas2ri.activate()
+
+# Load DESeq2 R package
+deseq = importr('DESeq2')
+
+# Load count data (count matrix)
+count_matrix = pd.read_csv('count_matrix.csv', index_col=0)
+
+# Load metadata (sample information)
+metadata = pd.read_csv('metadata.csv', index_col=0)
+
+# Convert pandas DataFrame to R DataFrame
+count_matrix_r = pandas2ri.py2ri(count_matrix)
+metadata_r = pandas2ri.py2ri(metadata)
+
+# Create a DESeqDataSet object
+dds = deseq.DESeqDataSetFromMatrix(countData=count_matrix_r, colData=metadata_r, design=ro.Formula('~ condition'))
+
+# Run DESeq analysis
+dds = deseq.DESeq(dds)
+
+# Extract differential expression results
+res = deseq.results(dds)
+
+# Convert results to pandas DataFrame
+res_df = pandas2ri.ri2py_dataframe(res)
+
+# Filter significant genes based on adjusted p-value (e.g., FDR < 0.05)
+significant_genes = res_df[res_df['padj'] < 0.05]
+
+# Print significant genes
+print(significant_genes)
